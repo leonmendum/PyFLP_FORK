@@ -67,8 +67,11 @@ if sys.version_info < (3, 11):  # https://github.com/Bobronium/fastenum/issues/2
 
     fastenum.enable()  # 33% faster parse()
 
-
 def parse(file: pathlib.Path | str) -> Project:
+    with open(file, "rb") as flp:
+        return parse(flp.read())
+
+def parse(file_data: bytes) -> Project:
     """Parses an FL Studio project file and returns a parsed :class:`Project`.
 
     Args:
@@ -78,8 +81,7 @@ def parse(file: pathlib.Path | str) -> Project:
         HeaderCorrupted: When an invalid value is found in the file header.
         VersionNotDetected: A correct string type couldn't be determined.
     """
-    with open(file, "rb") as flp:
-        stream = io.BytesIO(flp.read())
+    stream = io.BytesIO(file_data)
 
     events: list[AnyEvent] = []
     header = stream.read(FLP_HEADER.size)
@@ -120,7 +122,8 @@ def parse(file: pathlib.Path | str) -> Project:
     stream.seek(22)  # Back to start of events
     while stream.tell() < file_size:
         event_type: type[AnyEvent] | None = None
-        id = EventEnum(int.from_bytes(stream.read(1), "little"))
+        # id = EventEnum(int.from_bytes(stream.read(1), "little"))
+        id = int.from_bytes(stream.read(1))
 
         if id < WORD:
             value = stream.read(1)
@@ -151,7 +154,8 @@ def parse(file: pathlib.Path | str) -> Project:
                 event_type = U16Event
             elif id < TEXT:
                 event_type = U32Event
-            elif id < DATA or id.value in NEW_TEXT_IDS:
+            # elif id < DATA or id.value in NEW_TEXT_IDS:
+            elif id < DATA or id in NEW_TEXT_IDS:
                 if str_type is None:  # pragma: no cover
                     raise VersionNotDetected  # ! This should never happen
                 event_type = str_type

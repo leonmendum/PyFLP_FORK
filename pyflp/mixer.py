@@ -410,7 +410,9 @@ class Insert(EventModel, ModelCollection[Slot]):
     def __iter__(self) -> Iterator[Slot]:
         """Iterator over the effect empty and used slots."""
         for idx, ed in enumerate(self.events.divide(SlotID.Index, *SlotID, *PluginID)):
-            yield Slot(ed, params=self._kw["params"].slots[idx])
+            
+            params = self._kw["params"].slots[idx] if "params" in self._kw else []
+            yield Slot(ed, params=params)
 
     def __len__(self) -> int:
         try:

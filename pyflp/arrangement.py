@@ -383,20 +383,21 @@ class Arrangement(EventModel):
         for track_idx, ed in enumerate(self.events.divide(TrackID.Data, *TrackID)):
             if pl_evt is None:
                 yield Track(ed, items=[])
-                continue
+                break
 
             items: list[PLItemBase] = []
-            for i, item in enumerate(pl_evt):
-                if max_idx - item["track_rvidx"] != track_idx:
-                    continue
+            if hasattr(pl_evt, 'data'):
+                for i, item in enumerate(pl_evt):
+                    if max_idx - item["track_rvidx"] != track_idx:
+                        continue
 
-                if item["item_index"] <= item["pattern_base"]:
-                    iid = item["item_index"]
-                    items.append(ChannelPLItem(item, i, pl_evt, channel=channels[iid]))
-                else:
-                    num = item["item_index"] - item["pattern_base"]
-                    items.append(PatternPLItem(item, i, pl_evt, pattern=patterns[num]))
-            yield Track(ed, items=items)
+                    if item["item_index"] <= item["pattern_base"]:
+                        iid = item["item_index"]
+                        items.append(ChannelPLItem(item, i, pl_evt, channel=channels[iid]))
+                    else:
+                        num = item["item_index"] - item["pattern_base"]
+                        items.append(PatternPLItem(item, i, pl_evt, pattern=patterns[num]))
+                yield Track(ed, items=items)
 
 
 # TODO Find whether time is set to signature or division mode.
