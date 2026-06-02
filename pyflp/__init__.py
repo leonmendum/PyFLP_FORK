@@ -212,8 +212,8 @@ def parse(file_data: bytes) -> Project:
                     raise VersionNotDetected  # ! This should never happen
                 event_type = str_type
 
-                    if id == PluginID.InternalName:
-                        plug_name = event_type(id, value).value
+                if id == PluginID.InternalName:
+                    plug_name = event_type(id, value).value
                 elif id == PluginID.Data and plug_name is not None:
                     event_type = get_event_by_internal_name(plug_name)
                 else:
