@@ -312,8 +312,32 @@ class VSTPluginEvent(StructEventBase):
         ),
     ).compile()
 
+    # flpdiff fork: widened allowlist based on real-corpus evidence.
+    # PyFLP's STRUCT parses the payload fine regardless of the marker
+    # byte (it's just stored as `type` and never used to branch), so
+    # the warning was purely noisy for valid-but-uncatalogued values.
+    #
+    # Cross-file analysis revealed the marker correlates with the **FL
+    # Studio version** that saved the file, not with the plugin vendor.
+    # The same Ozone 10 (iZotope, VST3) instance appears as marker 10
+    # in an FL 21.1 save and marker 11 in an FL 24.1 save. Best
+    # hypothesis: FL bumps the byte when it changes the surrounding
+    # VSTPluginEvent serialization format.
+    #
+    # Markers seen in the wild (FL version → marker):
+    #   FL 9      → 6  (4frontpiano, TheCastle_19, ambience et al.)
+    #   FL 12-20  → 8 and/or 10 (upstream baseline — documented in
+    #               PyFLP's original comment on line 288)
+    #   FL 20.5   → 9  (phlegma_dogs)
+    #   FL 21.1   → 10 (salut-vera)
+    #   FL 24.1   → 11 (dorn-girls)
+    #   FL 25.2   → 12 (base_one_serum)
+    #
+    # See docs/pyflp-evaluation.md "Fork patches" for context.
+    _KNOWN_VST_TYPE_MARKERS = (6, 8, 9, 10, 11, 12)
+
     def __init__(self, id: Any, data: bytearray) -> None:
-        if data[0] not in (8, 10):
+        if data[0] not in self._KNOWN_VST_TYPE_MARKERS:
             warnings.warn(
                 f"VSTPluginEvent: Unknown marker {data[0]} detected. "
                 "Open an issue at https://github.com/demberto/PyFLP/issues "

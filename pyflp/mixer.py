@@ -607,15 +607,17 @@ class Mixer(EventModel, ModelCollection[Insert]):
             if e.id in (*InsertID, *PluginID, *SlotID):
                 return True
 
-        params: dict[int, _InsertItems] = {}
+        # A defaultdict so sparse / missing indices yield an empty _InsertItems
+        # rather than forcing every downstream reader to branch on absence.
+        # FL 25 emits MixerID.Params events whose channel_data packing leaves
+        # most insert indices unmapped; without this fallback, iterating slots
+        # or reading `routes` on those inserts raises KeyError('params').
+        params: DefaultDict[int, _InsertItems] = defaultdict(_InsertItems)
         if MixerID.Params in self.events.ids:
             params = cast(MixerParamsEvent, self.events.first(MixerID.Params)).items_
 
         for i, ed in enumerate(self.events.subtrees(select, self.max_inserts)):
-            if i in params:
-                yield Insert(ed, iid=i - 1, max_slots=self.max_slots, params=params[i])
-            else:
-                yield Insert(ed, iid=i - 1, max_slots=self.max_slots)
+            yield Insert(ed, iid=i - 1, max_slots=self.max_slots, params=params[i])
 
     def __len__(self) -> int:
         """Returns the number of inserts present in the project.
