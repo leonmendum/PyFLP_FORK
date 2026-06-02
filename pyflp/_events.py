@@ -67,7 +67,7 @@ class _EventEnumMeta(enum.EnumMeta):
         try:
             return super().__call__(value, *args, **kwargs)
         except TypeError as exc:
-            if "has no members defined" in str(exc):
+            if "has no members" in str(exc):
                 missing = cls._missing_(value)  # type: ignore[attr-defined]
                 if missing is not None:
                     return missing
