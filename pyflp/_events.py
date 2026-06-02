@@ -59,6 +59,20 @@ class _EventEnumMeta(enum.EnumMeta):
         """
         return obj in tuple(self)
 
+    def __call__(cls, value, *args, **kwargs):
+        # Python 3.11+ raises TypeError when an Enum base class has no members
+        # before invoking ``_missing_``. PyFLP relies on calling
+        # ``EventEnum(raw_id)`` to dispatch to subclass members. Delegate to
+        # ``_missing_`` explicitly in that case.
+        try:
+            return super().__call__(value, *args, **kwargs)
+        except TypeError as exc:
+            if "has no members" in str(exc):
+                missing = cls._missing_(value)  # type: ignore[attr-defined]
+                if missing is not None:
+                    return missing
+            raise
+
 
 class EventEnum(int, enum.Enum, metaclass=_EventEnumMeta):
     """IDs used by events.
