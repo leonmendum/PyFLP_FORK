@@ -81,6 +81,7 @@ if sys.version_info < (3, 11):  # https://github.com/Bobronium/fastenum/issues/2
 
     fastenum.enable()  # 33% faster parse()
 
+
 def parse(file: pathlib.Path | str) -> Project:
     with open(file, "rb") as flp:
         return parse(flp.read())
@@ -218,6 +219,10 @@ def parse(file_data: bytes) -> Project:
                     event_type = get_event_by_internal_name(plug_name)
                 else:
                     event_type = UnknownDataEvent
+
+        # if for some event_type is still None, default to UnknownDataEvent.
+        if event_type is None:
+            event_type = UnknownDataEvent
 
         events.append(event_type(id, value))
 
