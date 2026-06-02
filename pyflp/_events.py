@@ -1,7 +1,7 @@
 # PyFLP - An FL Studio project file (.flp) parser
 # Copyright (C) 2022 demberto
 #
-# This program is free software: you can redistribute it and/or modify it
+# This program is free software/or modify it
 # under the terms of the GNU General Public License as published by the Free
 # Software Foundation, either version 3 of the License, or (at your option)
 # any later version. This program is distributed in the hope that it will be
@@ -17,7 +17,6 @@ These types serve as the backbone for model creation and simplify marshalling
 and unmarshalling.
 """
 
-# Load a project file:
 from __future__ import annotations
 
 import abc
@@ -606,24 +605,49 @@ class EventTree:
     def subtree(self, select: Callable[[AnyEvent], bool | None]) -> EventTree:
         """Returns a mutable view containing events for which ``select`` was True.
 
-    Caution:
-        Always have a backup ready, just in case 😉
+        Caution:
+            Always use this function to create a mutable view. Maintaining
+            chilren and passing parent to a child are best done here.
+        """
+        el: list[IndexedEvent] = []
+        for ie in self.lst:
+            if select(ie.e):
+                el.append(ie)
+        obj = EventTree(self, el)
+        self.children.append(obj)
+        return obj
 
-    Args:
-        project: The object returned by :meth:`parse`.
-        file: The file in which the contents of :attr:`project` are serialised back.
-    """
-    buf = bytearray()
-    num_channels = len(project.channels)
-    header = FLP_HEADER.pack(b"FLhd", 6, project.format, num_channels, project.ppq)
-    buf.extend(header)
-    buf.extend(b"FLdt" + (b"\0" * 4))
-    total_size = 0
-    for event in project.events:
-        raw = bytes(event)
-        total_size += len(raw)
-        buf.extend(raw)
-    buf[18:22] = total_size.to_bytes(4, "little")
+    @yields_child
+    def subtrees(
+        self, select: Callable[[AnyEvent], bool | None], repeat: int
+    ) -> Iterator[EventTree]:
+        """Yields mutable views till ``select`` and ``repeat`` are satisfied.
 
-    with open(file, "wb") as fp:
-        fp.write(buf)
+        Args:
+            select: Called for every event in this dictionary by iterating over
+                a chained, sorted list. Returns True if event must be included.
+                Once it returns False, rest of them are ignored and resulting
+                EventTree is returned. Return None to skip an event.
+            repeat: Use -1 for infinite iterations.
+        """
+        el: list[IndexedEvent] = []
+        for ie in self.lst:
+            if not repeat:
+                return
+
+            result = select(ie.e)
+            if result is False:
+                yield EventTree(self, el)
+                el = [ie]  # Don't skip current event
+                repeat -= 1
+            elif result is not None:
+                el.append(ie)
+
+    @property
+    def ids(self) -> frozenset[EventEnum]:
+        return frozenset(ie.e.id for ie in self.lst)
+
+    @property
+    def indexes(self) -> frozenset[int]:
+        """Returns root indexes for all events in ``self``."""
+        return frozenset(ie.r for ie in self.lst)
