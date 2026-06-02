@@ -17,9 +17,7 @@ These types serve as the backbone for model creation and simplify marshalling
 and unmarshalling.
 """
 
-<<<<<<< HEAD
-Load a project file:
-=======
+# Load a project file:
 from __future__ import annotations
 
 import abc
